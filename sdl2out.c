@@ -140,3 +140,32 @@ void RenderVideo(unsigned char *pixels, int w, int h)
 
     SDL_GL_SwapWindow(window);
 }
+
+#include <SDL_image.h>
+
+void ShowLogo(char *logofile)
+{
+    IMG_Init(IMG_INIT_JPG);
+
+    SDL_Surface *image = IMG_Load(logofile);
+
+    if (image) {
+	SDL_Surface *logo = SDL_ConvertSurfaceFormat(image, SDL_PIXELFORMAT_ABGR8888, 0);
+
+	double ratio = (double) logo->h / (double) logo->w;
+	double dH = (double) mode.w * ratio;
+
+	glViewport ( 0, (mode.h - dH) / 2, mode.w, dH);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo->w, logo->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo->pixels);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	SDL_GL_SwapWindow(window);
+
+	sleep(5);
+
+	SDL_FreeSurface(image);
+	SDL_FreeSurface(logo);
+    }
+
+    IMG_Quit();
+}

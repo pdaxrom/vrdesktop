@@ -15,6 +15,10 @@ int main(int argc, char *argv[])
 
     SDL_Init(SDL_INIT_VIDEO);
 
+    SDL_GetCurrentDisplayMode(i, &mode);
+    HMDwidth = mode.w;
+    HMDheight = mode.h;
+
     for(i = 0; i < SDL_GetNumVideoDisplays(); ++i){
 	int should_be_zero = SDL_GetCurrentDisplayMode(i, &mode);
 	if(should_be_zero != 0) {
@@ -34,9 +38,10 @@ int main(int argc, char *argv[])
 
     if (cfg) {
     if (InitVideo(HMDindex, HMDwidth, HMDheight)) {
-//    if (InitVideo(HMDindex, 1280, 800)) {
 	int quit = 0;
 	SDL_Event e;
+
+	ShowLogo("IMG084.jps");
 
 	while (!quit) {
 	    while (SDL_PollEvent(&e) != 0) {
