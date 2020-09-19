@@ -10,6 +10,8 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#include "vrout.h"
+
 #define XCB_ALL_PLANES (~0)
 
 typedef struct {
@@ -95,14 +97,16 @@ int GetScreen(XGrabber *cfg, int x, int y, int w, int h)
     }
 
     if (reply != NULL) {
-	SDL_Surface *surf = SDL_CreateRGBSurfaceFrom(cfg->shmaddr, w, h, 8 * 4, w * 4, 0, 0, 0, 0);
-	IMG_SavePNG(surf, "haha.png");
+//	SDL_Surface *surf = SDL_CreateRGBSurfaceFrom(cfg->shmaddr, w, h, 8 * 4, w * 4, 0, 0, 0, 0);
+//	IMG_SavePNG(surf, "haha.png");
 
-	FILE *outf = fopen("haha.dat", "wb");
-	if (outf) {
-	    fwrite(cfg->shmaddr, 1, w * h * 4, outf);
-	    fclose(outf);
-	}
+//	FILE *outf = fopen("haha.dat", "wb");
+//	if (outf) {
+//	    fwrite(cfg->shmaddr, 1, w * h * 4, outf);
+//	    fclose(outf);
+//	}
+
+	RenderVideo(cfg->shmaddr, w, h);
 
 	free(reply);
 	return 1;
@@ -172,8 +176,18 @@ int main(int argc, char *argv[])
 	printf ("  black pixel...: %"PRIu32"\n", cfg.screen->black_pixel);
 	printf ("\n");
 
+InitVideo(1280, 800);
+
+int quit = 0;
+SDL_Event e;
+while (!quit) {
+    while (SDL_PollEvent(&e) != 0) {
+	if (e.type == SDL_QUIT) {
+	    quit = 1;
+	}
+    }
 	if (GetScreen(&cfg, 0, 0, 1920, 1080)) {
-	    printf("Captured!\n");
+//	    printf("Captured!\n");
 
 //	    int w = 1920;
 //	    int h = 1080;
@@ -184,6 +198,10 @@ int main(int argc, char *argv[])
 	} else {
 	    printf("Cannot capture!\n");
 	}
+	usleep(20000);
+}
+
+FinishVideo();
 
 	FreeShmBuffer(&cfg);
     } else {
