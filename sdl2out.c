@@ -127,11 +127,14 @@ void FinishVideo()
 
 void RenderVideo(unsigned char *pixels, int w, int h)
 {
-    glViewport (0, 0, mode.w / 2, mode.h);
+    double ratio = (double) h / (double) w;
+    double dH = (double) (mode.w / 2) * ratio;
+
+    glViewport (0, (mode.h - dH) / 2, mode.w / 2, dH);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    glViewport (mode.w / 2, 0, mode.w / 2, mode.h);
+    glViewport (mode.w / 2,  (mode.h - dH) / 2, mode.w / 2, dH);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
