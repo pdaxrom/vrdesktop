@@ -80,7 +80,7 @@ void FreeShmBuffer(XGrabber *cfg)
 	shmdt(cfg->shmaddr);
 }
 
-int GetScreen(XGrabber *cfg, int x, int y, int w, int h)
+int GrabberGetScreen(XGrabber *cfg, int x, int y, int w, int h)
 {
     xcb_generic_error_t *e = NULL;
     xcb_shm_get_image_cookie_t cookie = xcb_shm_get_image(cfg->connection, cfg->screen->root, x, y, w, h, XCB_ALL_PLANES, XCB_IMAGE_FORMAT_Z_PIXMAP, cfg->shmseg, 0);
@@ -129,6 +129,51 @@ static xcb_screen_t *ScreenOfDisplay(XGrabber *cfg, int screenNum)
   return NULL;
 }
 
+XGrabber *GrabberInit(int w, int h, int d)
+{
+    int i, screenNum;
+    XGrabber *cfg = malloc(sizeof(XGrabber));
+
+    cfg->connection = xcb_connect (NULL, &screenNum);
+
+    if (!CheckXcbShm(cfg)) {
+	SDL_Log("no xcb shm!");
+	xcb_disconnect(cfg->connection);
+	free(cfg);
+	return NULL;
+    }
+
+    ScreenOfDisplay(cfg, screenNum);
+
+    if (AllocateShmBuffer(cfg, w * h * d)) {
+
+    } else {
+	SDL_Log("Cannot allocate shm buffer!");
+	xcb_disconnect(cfg->connection);
+	free(cfg);
+	return NULL;
+    }
+
+    SDL_Log("");
+    SDL_Log("Informations of screen %"PRIu32":", cfg->screen->root);
+    SDL_Log("  width.........: %"PRIu16, cfg->screen->width_in_pixels);
+    SDL_Log("  height........: %"PRIu16, cfg->screen->height_in_pixels);
+    SDL_Log("  white pixel...: %"PRIu32, cfg->screen->white_pixel);
+    SDL_Log("  black pixel...: %"PRIu32, cfg->screen->black_pixel);
+    SDL_Log("");
+
+    return cfg;
+}
+
+void GrabberFinish(XGrabber *cfg)
+{
+    FreeShmBuffer(cfg);
+    xcb_disconnect(cfg->connection);
+    free(cfg);
+}
+
+/*
+
 int main(int argc, char *argv[])
 {
     XGrabber cfg;
@@ -144,7 +189,6 @@ int main(int argc, char *argv[])
 	return -1;
     }
 
-    /* Get the screen whose number is screenNum */
 
 //    const xcb_setup_t *setup = xcb_get_setup (connection);
 //    xcb_screen_iterator_t iter = xcb_setup_roots_iterator (setup);
@@ -166,7 +210,6 @@ int main(int argc, char *argv[])
     printf("height %d\n", geo->height);
 
     if (AllocateShmBuffer(&cfg, 1920 * 1080 * 4)) {
-	/* report */
 
 	printf ("\n");
 	printf ("Informations of screen %"PRIu32":\n", cfg.screen->root);
@@ -212,3 +255,5 @@ FinishVideo();
 
     return 0;
 }
+
+*/

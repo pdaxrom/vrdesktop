@@ -12,11 +12,12 @@
 static SDL_Window *window;
 static SDL_Surface *framebuffer;
 static SDL_GLContext context;
+static SDL_DisplayMode mode;
 
 static float scale_x = 1;
 static float scale_y = 1;
 
-int InitVideo(int w, int h)
+int InitVideo(int index, int w, int h)
 {
     enum {
     	ATTRIB_VERTEX,
@@ -38,7 +39,6 @@ int InitVideo(int w, int h)
          1.0f,  0.0f,
     };
 
-    SDL_DisplayMode mode;
 
     SDL_Log("Video starting...");
 
@@ -52,8 +52,8 @@ int InitVideo(int w, int h)
 
     SDL_Log("Window size %dx%d\n", mode.w, mode.h);
 
-    window = SDL_CreateWindow("MK90 LCD", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-    							mode.w, mode.h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN/* | SDL_WINDOW_FULLSCREEN*/);
+    window = SDL_CreateWindow("VRDESKTOP", SDL_WINDOWPOS_UNDEFINED_DISPLAY(index), SDL_WINDOWPOS_UNDEFINED_DISPLAY(index),
+    							mode.w, mode.h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN);
 
     if(!window) {
     	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window creation fail : %s\n", SDL_GetError());
@@ -127,7 +127,13 @@ void FinishVideo()
 
 void RenderVideo(unsigned char *pixels, int w, int h)
 {
+    glViewport (0, 0, mode.w / 2, mode.h);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glViewport (mode.w / 2, 0, mode.w / 2, mode.h);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
     SDL_GL_SwapWindow(window);
 }
