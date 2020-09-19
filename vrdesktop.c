@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 
     SDL_Init(SDL_INIT_VIDEO);
 
-    SDL_GetCurrentDisplayMode(i, &mode);
+    SDL_GetCurrentDisplayMode(0, &mode);
     HMDwidth = mode.w;
     HMDheight = mode.h;
 
@@ -32,6 +32,11 @@ int main(int argc, char *argv[])
 		SDL_Log("HMD found");
 	    }
 	}
+    }
+
+    if (HMDindex == -1) {
+	SDL_Log("No HMD found, use default display.");
+	HMDindex = 0;
     }
 
     struct XGrabber *cfg = GrabberInit(1920, 1080, 4);
