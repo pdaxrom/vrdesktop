@@ -53,7 +53,9 @@ int InitVideo(int index, int w, int h)
     SDL_Log("Window size %dx%d\n", mode.w, mode.h);
 
     window = SDL_CreateWindow("VRDESKTOP", SDL_WINDOWPOS_UNDEFINED_DISPLAY(index), SDL_WINDOWPOS_UNDEFINED_DISPLAY(index),
-    							mode.w, mode.h, SDL_WINDOW_OPENGL | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_BORDERLESS);
+    							mode.w, mode.h, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
+//    window = SDL_CreateWindow("VRDESKTOP", SDL_WINDOWPOS_UNDEFINED_DISPLAY(index), SDL_WINDOWPOS_UNDEFINED_DISPLAY(index),
+//    							mode.w, mode.h, SDL_WINDOW_OPENGL | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_BORDERLESS);
 
     if(!window) {
     	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window creation fail : %s\n", SDL_GetError());
