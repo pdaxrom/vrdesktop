@@ -42,7 +42,7 @@ int InitVideo(int index, int w, int h)
 
     SDL_Log("Video starting...");
 
-    SDL_GetDesktopDisplayMode(0, &mode);
+//    SDL_GetDesktopDisplayMode(index, &mode);
 
     SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 16);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
@@ -53,7 +53,7 @@ int InitVideo(int index, int w, int h)
     SDL_Log("Window size %dx%d\n", mode.w, mode.h);
 
     window = SDL_CreateWindow("VRDESKTOP", SDL_WINDOWPOS_UNDEFINED_DISPLAY(index), SDL_WINDOWPOS_UNDEFINED_DISPLAY(index),
-    							mode.w, mode.h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN);
+    							mode.w, mode.h, SDL_WINDOW_OPENGL | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_BORDERLESS);
 
     if(!window) {
     	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window creation fail : %s\n", SDL_GetError());
@@ -128,11 +128,11 @@ void FinishVideo()
 void RenderVideo(unsigned char *pixels, int w, int h)
 {
     glViewport (0, 0, mode.w / 2, mode.h);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     glViewport (mode.w / 2, 0, mode.w / 2, mode.h);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     SDL_GL_SwapWindow(window);
