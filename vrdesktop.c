@@ -3,8 +3,11 @@
 #include "vrout.h"
 #include "xcbgrabber.h"
 
-#define HMD_WIDTH	2560
-#define HMD_HEIGHT	1440
+#define HMD_WIDTH	1440
+#define HMD_HEIGHT	2560
+
+//#define HMD_WIDTH	2560
+//#define HMD_HEIGHT	1440
 
 int main(int argc, char *argv[])
 {
@@ -38,6 +41,11 @@ int main(int argc, char *argv[])
 	SDL_Log("No HMD found, use default display.");
 	HMDindex = 0;
     }
+
+//
+//HMDwidth = 600;
+//HMDheight = 800;
+//
 
     struct XGrabber *cfg = GrabberInit(1920, 1080, 4);
 
