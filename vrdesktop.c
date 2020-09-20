@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
 	    SDL_Log("Could not get display mode for video display #%d: %s", i, SDL_GetError());
 	} else {
 	    SDL_Log("Display #%d: current display mode is %dx%dpx @ %dhz.", i, mode.w, mode.h, mode.refresh_rate);
-	    if (mode.w == HMD_WIDTH && mode.h == HMD_HEIGHT) {
+	    if ((mode.w == HMD_WIDTH && mode.h == HMD_HEIGHT) ||
+		(mode.w == HMD_HEIGHT && mode.h == HMD_WIDTH)) {
 		HMDindex = i;
 		HMDwidth = mode.w;
 		HMDheight = mode.h;

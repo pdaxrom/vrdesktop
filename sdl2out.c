@@ -212,16 +212,29 @@ void FinishVideo()
 
 void RenderVideo(unsigned char *pixels, int w, int h)
 {
-    double ratio = (double) h / (double) w;
-    double dH = (double) (mode.w / 2) * ratio;
+    if (mode.w > mode.h) {
+	double scale = (double) (mode.w / 2) / (double) w;
+	double dH = (double) h * scale;
 
-    glViewport (0, (mode.h - dH) / 2, mode.w / 2, dH);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glViewport (0, (mode.h - dH) / 2, mode.w / 2, dH);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    glViewport (mode.w / 2,  (mode.h - dH) / 2, mode.w / 2, dH);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glViewport (mode.w / 2,  (mode.h - dH) / 2, mode.w / 2, dH);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    } else {
+	double scale = (double) (mode.h / 2) / (double) w;
+	double dH = (double) h * scale;
+
+	glViewport ((mode.w - dH) / 2, 0, dH, mode.h / 2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	glViewport ((mode.w - dH) / 2, mode.h / 2, dH, mode.h / 2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    }
 
     SDL_GL_SwapWindow(window);
 }
@@ -285,7 +298,7 @@ int Show3DSurface(SDL_Surface *image)
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 	glViewport ((mode.w - dH) / 2, mode.h / 2, dH, mode.h / 2);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, left->w, left->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
