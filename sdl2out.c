@@ -22,6 +22,8 @@ static GLuint renderedTexture = 0;
 
 static int texRotate = 0;
 
+double lens_scale = 0;
+
 static float scale_x = 1;
 static float scale_y = 1;
 
@@ -128,6 +130,8 @@ static const GLfloat textureVertices[][8] = {
 int InitVideo(int index, int w, int h)
 {
     texRotate = 0;
+
+    lens_scale = 0.4f;
 
     SDL_Log("Video starting...");
 
@@ -236,7 +240,7 @@ int InitVideo(int index, int w, int h)
 
     glGenTextures(1, &framebufferTexture);
     glBindTexture(GL_TEXTURE_2D, framebufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mode.w / 2, mode.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mode.w, mode.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -255,9 +259,9 @@ void FinishVideo()
     SDL_Log("Video finished...");
 }
 
-void RenderLensTexture(SDL_Surface *surf, double scale, int x, int y, int w, int h)
+void RenderLensTexture(void *pixels, int pixels_w, int pixels_h, double scale, int x, int y, int w, int h)
 {
-    double img_scale = (double) (w / 2) / (double) surf->w;
+    double img_scale = (double) (w / 2) / (double) pixels_w;
     double lens_angle = scale * M_PI;// * 0.9;
 
     // To texture
@@ -279,14 +283,14 @@ void RenderLensTexture(SDL_Surface *surf, double scale, int x, int y, int w, int
     glEnableVertexAttribArray(ATTRIB_U_TEXTURE);
 
     if (w > h) {
-	double dH = (double) surf->h * img_scale;
+	double dH = (double) pixels_h * img_scale;
 	glViewport (0, (h - dH) / 2, w / 2, dH);
     } else {
-	double dW = (double) surf->w * img_scale;
+	double dW = (double) pixels_w * img_scale;
 	glViewport ((w - dW) / 2, 0, dW, h / 2);
     }
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surf->w, surf->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, surf->pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pixels_w, pixels_h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     glDisableVertexAttribArray(ATTRIB_U_POSITION);
@@ -296,10 +300,6 @@ void RenderLensTexture(SDL_Surface *surf, double scale, int x, int y, int w, int
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDisable(GL_DEPTH_TEST);
     glClear(GL_DEPTH_BUFFER_BIT);
-
-//    glUseProgram(shaderProgram2fb);
-//    glBindAttribLocation(shaderProgram2fb, ATTRIB_U_POSITION, "u_position");
-//    glBindAttribLocation(shaderProgram2fb, ATTRIB_U_TEXTURE, "u_texture");
 
     glUseProgram(shaderProgram2lens);
     glBindAttribLocation(shaderProgram2lens, ATTRIB_U_POSITION, "u_position");
@@ -333,6 +333,15 @@ void RenderLensTexture(SDL_Surface *surf, double scale, int x, int y, int w, int
 void RenderVideo(unsigned char *pixels, int w, int h)
 {
     if (mode.w > mode.h) {
+	RenderLensTexture(pixels, w, h, lens_scale, 0, 0, mode.w, mode.h);
+	RenderLensTexture(pixels, w, h, lens_scale, mode.w / 2, 0, mode.w, mode.h);
+    } else {
+	RenderLensTexture(pixels, w, h, lens_scale, 0, 0, mode.w, mode.h);
+	RenderLensTexture(pixels, w, h, lens_scale, 0, mode.h / 2, mode.w, mode.h);
+    }
+
+#if 0
+    if (mode.w > mode.h) {
 	double scale = (double) (mode.w / 2) / (double) w;
 	double dH = (double) h * scale;
 
@@ -355,7 +364,7 @@ void RenderVideo(unsigned char *pixels, int w, int h)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
-
+#endif
     SDL_GL_SwapWindow(window);
 }
 
@@ -411,34 +420,11 @@ int Show3DSurface(SDL_Surface *image)
     double lens_scale = 0.5f; //50 / 100 * 2.0 - 1.0;
 
     if (mode.w > mode.h) {
-	RenderLensTexture(left, lens_scale, 0, 0, mode.w, mode.h);
-	RenderLensTexture(right, lens_scale, mode.w / 2, 0, mode.w, mode.h);
+	RenderLensTexture(left->pixels, left->w, left->h, lens_scale, 0, 0, mode.w, mode.h);
+	RenderLensTexture(right->pixels, right->w, right->h, lens_scale, mode.w / 2, 0, mode.w, mode.h);
     } else {
-	RenderLensTexture(left, lens_scale, 0, 0, mode.w, mode.h);
-	RenderLensTexture(right, lens_scale, 0, mode.h / 2, mode.w, mode.h);
-#if 0
-
-	double scale = (double) (mode.h / 2) / (double) left->h;
-	double dW = (double) left->w * scale;
-
-	{
-	    double lens_scale = 0.0f; //50 / 100 * 2.0 - 1.0;
-	    double lens_angle = lens_scale * M_PI;// * 0.9;
-
-//	    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	    glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_resolution"), mode.w, mode.h / 2);
-	    glUniform1f(glGetUniformLocation(shaderProgram2lens, "u_angle"), lens_angle);
-
-	    glViewport ((mode.w - dH) / 2, 0, dH, mode.h / 2);
-	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, left->w, left->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, left->pixels);
-	    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	}
-
-//	glViewport ((mode.w - dH) / 2, mode.h / 2, dH, mode.h / 2);
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
-//	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-#endif
+	RenderLensTexture(left->pixels, left->w, left->h, lens_scale, 0, 0, mode.w, mode.h);
+	RenderLensTexture(right->pixels, right->w, right->h, lens_scale, 0, mode.h / 2, mode.w, mode.h);
     }
 
     SDL_GL_SwapWindow(window);
