@@ -4,5 +4,5 @@ uniform sampler2D videoFrame;
 
 void main()
 {
-	gl_FragColor = texture2D(videoFrame, textureCoordinate);
+    gl_FragColor = texture2D(videoFrame, textureCoordinate);
 }

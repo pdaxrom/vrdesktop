@@ -5,12 +5,12 @@ CFLAGS += $(shell sdl2-config --cflags)
 
 LIBS =
 LIBS += $(shell sdl2-config --libs) -lSDL2_image -lGL
-LIBS += -lxcb -lxcb-shm
+LIBS += -lxcb -lxcb-shm -lm
 
 CFLAGS += -g
 LDFLAGS += -g
 
-OBJS = xcbgrabber.o sdl2out.o shader.o vrdesktop.o
+OBJS = xcbgrabber.o sdl2out.o shader.o vrdesktop.o matrix.o
 
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)

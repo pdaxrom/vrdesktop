@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     }
 
 //
-//HMDwidth = 600;
+//HMDwidth = 400;
 //HMDheight = 800;
 //
 

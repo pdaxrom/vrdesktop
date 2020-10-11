@@ -154,13 +154,13 @@ XGrabber *GrabberInit(int w, int h, int d)
 	return NULL;
     }
 
-    SDL_Log("");
+    SDL_Log(" ");
     SDL_Log("Informations of screen %"PRIu32":", cfg->screen->root);
     SDL_Log("  width.........: %"PRIu16, cfg->screen->width_in_pixels);
     SDL_Log("  height........: %"PRIu16, cfg->screen->height_in_pixels);
     SDL_Log("  white pixel...: %"PRIu32, cfg->screen->white_pixel);
     SDL_Log("  black pixel...: %"PRIu32, cfg->screen->black_pixel);
-    SDL_Log("");
+    SDL_Log(" ");
 
     return cfg;
 }

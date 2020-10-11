@@ -24,8 +24,17 @@ static int texRotate = 0;
 
 double lens_scale = 0;
 
-static float scale_x = 1;
-static float scale_y = 1;
+typedef struct {
+    float x, y, z;
+} vec3;
+
+static vec3 u_translation = {
+    0, 0, -4
+};
+
+static vec3 u_angles = {
+    0, 0, 0
+};
 
 /*
     // normal
@@ -267,6 +276,8 @@ void RenderLensTexture(void *pixels, int pixels_w, int pixels_h, double scale, i
     // To texture
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -284,11 +295,26 @@ void RenderLensTexture(void *pixels, int pixels_w, int pixels_h, double scale, i
 
     if (w > h) {
 	double dH = (double) pixels_h * img_scale;
-	glViewport (0, (h - dH) / 2, w / 2, dH);
+	glViewport (0, 0, mode.w / 2, mode.h);
+	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_width"), mode.w / 2);
+	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_height"), mode.h);
+//	glViewport (0, (h - dH) / 2, w / 2, dH);
+//	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_width"), (double) pixels_w * img_scale);
+//	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_height"), dH);
     } else {
 	double dW = (double) pixels_w * img_scale;
-	glViewport ((w - dW) / 2, 0, dW, h / 2);
+	glViewport (0, 0, mode.w, mode.h / 2);
+	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_width"), mode.w);
+	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_height"), mode.h / 2);
+//	glViewport ((w - dW) / 2, 0, dW, h / 2);
+//	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_width"), dW);
+//	glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_height"), (double) pixels_h * img_scale);
     }
+
+//    glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_width"), pixels_w);
+//    glUniform1f(glGetUniformLocation(shaderProgram2fb, "u_height"), pixels_h);
+    glUniform3f(glGetUniformLocation(shaderProgram2fb, "u_angles"), u_angles.x, u_angles.y, u_angles.z);
+    glUniform3f(glGetUniformLocation(shaderProgram2fb, "u_translation"), u_translation.x, u_translation.y, u_translation.z);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pixels_w, pixels_h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
