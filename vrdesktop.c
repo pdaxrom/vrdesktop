@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
 	SDL_Event e;
 
 	ShowLogo("IMG084.jps");
+//	ShowLogo("IMG084test.jpg");
 
 #if 0
 	while (!quit) {

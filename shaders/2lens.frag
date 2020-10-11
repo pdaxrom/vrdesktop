@@ -1,12 +1,13 @@
 //precision mediump float;
 
+uniform vec2      u_offset;
 uniform vec2      u_resolution;
 uniform float     u_angle;
 uniform sampler2D u_texture;
 
 void main()
 {
-    vec2 uv = gl_FragCoord.xy / u_resolution;
+    vec2 uv = (gl_FragCoord.xy - u_offset) / u_resolution;
     vec2 ndcPos = uv * 2.0 - 1.0;
 
     float aspect = u_resolution.x / u_resolution.y;

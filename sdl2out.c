@@ -140,7 +140,7 @@ int InitVideo(int index, int w, int h)
     mode.h = h;
 
     if (mode.w < mode.h) {
-//	texRotate = 3;
+	texRotate = 3;
     }
 
     SDL_Log("Window size %dx%d\n", mode.w, mode.h);
@@ -203,7 +203,11 @@ int InitVideo(int index, int w, int h)
 
     glGenTextures(1, &renderedTexture);
     glBindTexture(GL_TEXTURE_2D, renderedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mode.w / 2, mode.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    if (mode.w > mode.h) {
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mode.w / 2, mode.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    } else {
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mode.w, mode.h / 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -216,7 +220,11 @@ int InitVideo(int index, int w, int h)
     GLuint depth_renderbuffer;
     glGenRenderbuffers(1, &depth_renderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, depth_renderbuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mode.w / 2, mode.h);
+    if (mode.w > mode.h) {
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mode.w / 2, mode.h);
+    } else {
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mode.w, mode.h / 2);
+    }
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_renderbuffer);
 
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -256,7 +264,6 @@ void RenderLensTexture(SDL_Surface *surf, double scale, int x, int y, int w, int
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
     glEnable(GL_DEPTH_TEST);
 
-//    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shaderProgram2fb);
@@ -268,13 +275,16 @@ void RenderLensTexture(SDL_Surface *surf, double scale, int x, int y, int w, int
 
     glVertexAttribPointer(ATTRIB_U_POSITION, 2, GL_FLOAT, 0, 0, squareVertices);
     glEnableVertexAttribArray(ATTRIB_U_POSITION);
-    glVertexAttribPointer(ATTRIB_U_TEXTURE, 2, GL_FLOAT, 0, 0, textureVertices[0]);
+    glVertexAttribPointer(ATTRIB_U_TEXTURE, 2, GL_FLOAT, 0, 0, textureVertices[texRotate]);
     glEnableVertexAttribArray(ATTRIB_U_TEXTURE);
 
-    double dH = (double) surf->h * img_scale;
-    glViewport (0, (h - dH) / 2, w / 2, dH);
-
-printf("%d,%d - %d,%d\n", 0, (int) (h - dH) / 2, w / 2, (int)dH);
+    if (w > h) {
+	double dH = (double) surf->h * img_scale;
+	glViewport (0, (h - dH) / 2, w / 2, dH);
+    } else {
+	double dW = (double) surf->w * img_scale;
+	glViewport ((w - dW) / 2, 0, dW, h / 2);
+    }
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surf->w, surf->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, surf->pixels);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -285,9 +295,6 @@ printf("%d,%d - %d,%d\n", 0, (int) (h - dH) / 2, w / 2, (int)dH);
     // To framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDisable(GL_DEPTH_TEST);
-//    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-//    glClear(GL_COLOR_BUFFER_BIT);
-
     glClear(GL_DEPTH_BUFFER_BIT);
 
 //    glUseProgram(shaderProgram2fb);
@@ -297,17 +304,26 @@ printf("%d,%d - %d,%d\n", 0, (int) (h - dH) / 2, w / 2, (int)dH);
     glUseProgram(shaderProgram2lens);
     glBindAttribLocation(shaderProgram2lens, ATTRIB_U_POSITION, "u_position");
     glBindAttribLocation(shaderProgram2lens, ATTRIB_U_TEXTURE, "u_texture");
-    glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_resolution"), w / 2, h);
+    glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_offset"), x, y);
+    if (w > h) {
+	glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_resolution"), w / 2, h);
+    } else {
+	glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_resolution"), w, h / 2);
+    }
     glUniform1f(glGetUniformLocation(shaderProgram2lens, "u_angle"), lens_angle);
 
     glBindTexture(GL_TEXTURE_2D, renderedTexture);
 
     glVertexAttribPointer(ATTRIB_U_POSITION, 2, GL_FLOAT, 0, 0, squareVertices);
     glEnableVertexAttribArray(ATTRIB_U_POSITION);
-    glVertexAttribPointer(ATTRIB_U_TEXTURE, 2, GL_FLOAT, 0, 0, textureVertices[0]);
+    glVertexAttribPointer(ATTRIB_U_TEXTURE, 2, GL_FLOAT, 0, 0, textureVertices[texRotate]);
     glEnableVertexAttribArray(ATTRIB_U_TEXTURE);
 
-    glViewport (x, y, w / 2, h);
+    if (w > h) {
+	glViewport (x, y, w / 2, h);
+    } else {
+	glViewport (x, y, w, h / 2);
+    }
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     glDisableVertexAttribArray(ATTRIB_U_POSITION);
@@ -392,16 +408,16 @@ int Show3DSurface(SDL_Surface *image)
 	SDL_Log("SDL_BlitSurface() failed: %s", SDL_GetError());
     }
 
-    if (mode.w > mode.h) {
-	double lens_scale = 0.5f; //50 / 100 * 2.0 - 1.0;
+    double lens_scale = 0.5f; //50 / 100 * 2.0 - 1.0;
 
+    if (mode.w > mode.h) {
 	RenderLensTexture(left, lens_scale, 0, 0, mode.w, mode.h);
 	RenderLensTexture(right, lens_scale, mode.w / 2, 0, mode.w, mode.h);
-
-//	glViewport (mode.w / 2,  (mode.h - dH) / 2, mode.w / 2, dH);
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
-//	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     } else {
+	RenderLensTexture(left, lens_scale, 0, 0, mode.w, mode.h);
+	RenderLensTexture(right, lens_scale, 0, mode.h / 2, mode.w, mode.h);
+#if 0
+
 	double scale = (double) (mode.h / 2) / (double) left->h;
 	double dW = (double) left->w * scale;
 
@@ -414,8 +430,7 @@ int Show3DSurface(SDL_Surface *image)
 	    glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_resolution"), mode.w, mode.h / 2);
 	    glUniform1f(glGetUniformLocation(shaderProgram2lens, "u_angle"), lens_angle);
 
-	    glViewport (0, 0, mode.w, mode.h / 2);
-//	    glViewport ((mode.w - dH) / 2, 0, dH, mode.h / 2);
+	    glViewport ((mode.w - dH) / 2, 0, dH, mode.h / 2);
 	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, left->w, left->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, left->pixels);
 	    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
@@ -423,6 +438,7 @@ int Show3DSurface(SDL_Surface *image)
 //	glViewport ((mode.w - dH) / 2, mode.h / 2, dH, mode.h / 2);
 //	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
 //	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+#endif
     }
 
     SDL_GL_SwapWindow(window);
