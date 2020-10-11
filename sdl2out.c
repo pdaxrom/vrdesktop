@@ -14,6 +14,14 @@ static SDL_Surface *framebuffer;
 static SDL_GLContext context;
 static SDL_DisplayMode mode;
 
+static GLuint shaderProgram2fb = 0;
+static GLuint shaderProgram2lens = 0;
+static GLuint framebufferTexture = 0;
+static GLuint framebufferName = 0;
+static GLuint renderedTexture = 0;
+
+static int texRotate = 0;
+
 static float scale_x = 1;
 static float scale_y = 1;
 
@@ -75,22 +83,22 @@ static float scale_y = 1;
     };
 */
 
-int InitVideo(int index, int w, int h)
-{
-    enum {
-    	ATTRIB_VERTEX,
-    	ATTRIB_TEXTUREPOSITON,
+enum {
+    	ATTRIB_U_POSITION,
+	ATTRIB_U_TEXTURE,
+    	ATTRIB_U_RESOLUTION,
+	ATTRIB_U_ANGLE,
     	NUM_ATTRIBUTES
-    };
+};
 
-    static const GLfloat squareVertices[] = {
+static const GLfloat squareVertices[] = {
         -1.0f, -1.0f,
          1.0f, -1.0f,
         -1.0f,  1.0f,
          1.0f,  1.0f,
-    };
+};
 
-    static const GLfloat textureVertices[][8] = {
+static const GLfloat textureVertices[][8] = {
 	{
          0.0f,  1.0f,
          1.0f,  1.0f,
@@ -115,9 +123,11 @@ int InitVideo(int index, int w, int h)
          1.0f,  0.0f,
          1.0f,  1.0f,
 	}
-    };
+};
 
-    int texRotate = 0;
+int InitVideo(int index, int w, int h)
+{
+    texRotate = 0;
 
     SDL_Log("Video starting...");
 
@@ -130,7 +140,7 @@ int InitVideo(int index, int w, int h)
     mode.h = h;
 
     if (mode.w < mode.h) {
-	texRotate = 3;
+//	texRotate = 3;
     }
 
     SDL_Log("Window size %dx%d\n", mode.w, mode.h);
@@ -158,45 +168,72 @@ int InitVideo(int index, int w, int h)
     GLuint vertexShader = -1;
     GLuint fragmentShader = -1;
 
-    if (process_shader(&vertexShader, "shaders/shader.vert", GL_VERTEX_SHADER)) {
+    if (process_shader(&vertexShader, "shaders/2lens.vert", GL_VERTEX_SHADER)) {
     	SDL_Log("Unable load vertex shader");
     	return 1;
     }
 
-    if (process_shader(&fragmentShader, "shaders/shader.frag", GL_FRAGMENT_SHADER)) {
+    if (process_shader(&fragmentShader, "shaders/2lens.frag", GL_FRAGMENT_SHADER)) {
     	SDL_Log("Unable load fragment shader");
     	return 1;
     }
 
-    GLuint shaderProgram  = glCreateProgram ();                 // create program object
-    glAttachShader ( shaderProgram, vertexShader );             // and attach both...
-    glAttachShader ( shaderProgram, fragmentShader );           // ... shaders to it
+    shaderProgram2lens = glCreateProgram();
+    glAttachShader(shaderProgram2lens, vertexShader);
+    glAttachShader(shaderProgram2lens, fragmentShader);
+    glLinkProgram(shaderProgram2lens);
 
-    glBindAttribLocation(shaderProgram, ATTRIB_VERTEX, "position");
-    glBindAttribLocation(shaderProgram, ATTRIB_TEXTUREPOSITON, "inputTextureCoordinate");
+    if (process_shader(&vertexShader, "shaders/2fb.vert", GL_VERTEX_SHADER)) {
+    	SDL_Log("Unable load vertex shader");
+    	return 1;
+    }
 
-    glLinkProgram ( shaderProgram );    // link the program
-    glUseProgram  ( shaderProgram );    // and select it for usage
+    if (process_shader(&fragmentShader, "shaders/2fb.frag", GL_FRAGMENT_SHADER)) {
+    	SDL_Log("Unable load fragment shader");
+    	return 1;
+    }
 
-    glActiveTexture(GL_TEXTURE0);
-    GLuint videoFrameTexture = 0;
-    glGenTextures(1, &videoFrameTexture);
-    glBindTexture(GL_TEXTURE_2D, videoFrameTexture);
+    shaderProgram2fb = glCreateProgram();
+    glAttachShader(shaderProgram2fb, vertexShader);
+    glAttachShader(shaderProgram2fb, fragmentShader);
+    glLinkProgram(shaderProgram2fb);
+
+    glGenFramebuffers(1, &framebufferName);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
+
+    glGenTextures(1, &renderedTexture);
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mode.w / 2, mode.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glBindTexture(GL_TEXTURE_2D, videoFrameTexture);
 
-    GLint tex = glGetUniformLocation(shaderProgram, "tex");
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderedTexture, 0);
 
-    glUniform1i(tex, 0);
+    // Build the texture that will serve as the depth attachment for the framebuffer.
+    GLuint depth_renderbuffer;
+    glGenRenderbuffers(1, &depth_renderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depth_renderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mode.w / 2, mode.h);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_renderbuffer);
 
-    glVertexAttribPointer(ATTRIB_VERTEX, 2, GL_FLOAT, 0, 0, squareVertices);
-    glEnableVertexAttribArray(ATTRIB_VERTEX);
-    glVertexAttribPointer(ATTRIB_TEXTUREPOSITON, 2, GL_FLOAT, 0, 0, textureVertices[texRotate]);
-    glEnableVertexAttribArray(ATTRIB_TEXTUREPOSITON);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE){
+	fprintf(stderr, "Gl framebuffer error!\n");
+    }
 
-    glViewport ( 0 , 0 , mode.w , mode.h );
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glGenTextures(1, &framebufferTexture);
+    glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mode.w / 2, mode.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     // End of GL init
     return 1;
@@ -208,6 +245,73 @@ void FinishVideo()
     SDL_DestroyWindow(window);
 
     SDL_Log("Video finished...");
+}
+
+void RenderLensTexture(SDL_Surface *surf, double scale, int x, int y, int w, int h)
+{
+    double img_scale = (double) (w / 2) / (double) surf->w;
+    double lens_angle = scale * M_PI;// * 0.9;
+
+    // To texture
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
+    glEnable(GL_DEPTH_TEST);
+
+//    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(shaderProgram2fb);
+    glBindAttribLocation(shaderProgram2fb, ATTRIB_U_POSITION, "u_position");
+    glBindAttribLocation(shaderProgram2fb, ATTRIB_U_TEXTURE, "u_texture");
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+
+    glVertexAttribPointer(ATTRIB_U_POSITION, 2, GL_FLOAT, 0, 0, squareVertices);
+    glEnableVertexAttribArray(ATTRIB_U_POSITION);
+    glVertexAttribPointer(ATTRIB_U_TEXTURE, 2, GL_FLOAT, 0, 0, textureVertices[0]);
+    glEnableVertexAttribArray(ATTRIB_U_TEXTURE);
+
+    double dH = (double) surf->h * img_scale;
+    glViewport (0, (h - dH) / 2, w / 2, dH);
+
+printf("%d,%d - %d,%d\n", 0, (int) (h - dH) / 2, w / 2, (int)dH);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surf->w, surf->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, surf->pixels);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glDisableVertexAttribArray(ATTRIB_U_POSITION);
+    glDisableVertexAttribArray(ATTRIB_U_TEXTURE);
+
+    // To framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_DEPTH_TEST);
+//    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+//    glClear(GL_COLOR_BUFFER_BIT);
+
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+//    glUseProgram(shaderProgram2fb);
+//    glBindAttribLocation(shaderProgram2fb, ATTRIB_U_POSITION, "u_position");
+//    glBindAttribLocation(shaderProgram2fb, ATTRIB_U_TEXTURE, "u_texture");
+
+    glUseProgram(shaderProgram2lens);
+    glBindAttribLocation(shaderProgram2lens, ATTRIB_U_POSITION, "u_position");
+    glBindAttribLocation(shaderProgram2lens, ATTRIB_U_TEXTURE, "u_texture");
+    glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_resolution"), w / 2, h);
+    glUniform1f(glGetUniformLocation(shaderProgram2lens, "u_angle"), lens_angle);
+
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+    glVertexAttribPointer(ATTRIB_U_POSITION, 2, GL_FLOAT, 0, 0, squareVertices);
+    glEnableVertexAttribArray(ATTRIB_U_POSITION);
+    glVertexAttribPointer(ATTRIB_U_TEXTURE, 2, GL_FLOAT, 0, 0, textureVertices[0]);
+    glEnableVertexAttribArray(ATTRIB_U_TEXTURE);
+
+    glViewport (x, y, w / 2, h);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glDisableVertexAttribArray(ATTRIB_U_POSITION);
+    glDisableVertexAttribArray(ATTRIB_U_TEXTURE);
 }
 
 void RenderVideo(unsigned char *pixels, int w, int h)
@@ -243,9 +347,19 @@ void RenderVideo(unsigned char *pixels, int w, int h)
 
 int Show3DSurface(SDL_Surface *image)
 {
+    int use_w, use_h;
+
     SDL_Rect srcrect;
 
     SDL_Surface *surf = SDL_ConvertSurfaceFormat(image, SDL_PIXELFORMAT_ARGB8888, 0);
+
+    if (mode.w > mode.h) {
+	use_w = mode.w / 2;
+	use_h = mode.h;
+    } else {
+	use_w = mode.w;
+	use_h = mode.h / 2;
+    }
 
     SDL_Surface *left = SDL_CreateRGBSurface(0, surf->w / 2, surf->h, surf->format->BitsPerPixel, surf->format->Rmask, surf->format->Gmask, surf->format->Bmask, surf->format->Amask);
     if (left == NULL) {
@@ -279,27 +393,36 @@ int Show3DSurface(SDL_Surface *image)
     }
 
     if (mode.w > mode.h) {
-	double scale = (double) (mode.w / 2) / (double) left->w;
-	double dH = (double) left->h * scale;
+	double lens_scale = 0.5f; //50 / 100 * 2.0 - 1.0;
 
-	glViewport (0, (mode.h - dH) / 2, mode.w / 2, dH);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, left->w, left->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, left->pixels);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	RenderLensTexture(left, lens_scale, 0, 0, mode.w, mode.h);
+	RenderLensTexture(right, lens_scale, mode.w / 2, 0, mode.w, mode.h);
 
-	glViewport (mode.w / 2,  (mode.h - dH) / 2, mode.w / 2, dH);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+//	glViewport (mode.w / 2,  (mode.h - dH) / 2, mode.w / 2, dH);
+//	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
+//	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     } else {
-	double scale = (double) (mode.h / 2) / (double) left->w;
-	double dH = (double) left->h * scale;
+	double scale = (double) (mode.h / 2) / (double) left->h;
+	double dW = (double) left->w * scale;
 
-	glViewport ((mode.w - dH) / 2, 0, dH, mode.h / 2);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, left->w, left->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, left->pixels);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	{
+	    double lens_scale = 0.0f; //50 / 100 * 2.0 - 1.0;
+	    double lens_angle = lens_scale * M_PI;// * 0.9;
 
-	glViewport ((mode.w - dH) / 2, mode.h / 2, dH, mode.h / 2);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+//	    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	    glUniform2f(glGetUniformLocation(shaderProgram2lens, "u_resolution"), mode.w, mode.h / 2);
+	    glUniform1f(glGetUniformLocation(shaderProgram2lens, "u_angle"), lens_angle);
+
+	    glViewport (0, 0, mode.w, mode.h / 2);
+//	    glViewport ((mode.w - dH) / 2, 0, dH, mode.h / 2);
+	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, left->w, left->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, left->pixels);
+	    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+
+//	glViewport ((mode.w - dH) / 2, mode.h / 2, dH, mode.h / 2);
+//	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, right->w, right->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, right->pixels);
+//	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
     SDL_GL_SwapWindow(window);

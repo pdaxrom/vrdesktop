@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
 
 	ShowLogo("IMG084.jps");
 
+#if 0
 	while (!quit) {
 	    while (SDL_PollEvent(&e) != 0) {
 		if (e.type == SDL_QUIT) {
@@ -71,6 +72,7 @@ int main(int argc, char *argv[])
 
 	    usleep(20000);
 	}
+#endif
 
 	FinishVideo();
     } else {
